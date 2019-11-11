@@ -3,11 +3,18 @@ import matplotlib.pyplot as plt
 import matplotlib.collections as mcoll
 import matplotlib.colors as mcolors
 import json as js
+from threading import Timer
 
 from random import uniform, choice
 from math import sin, cos, pi, inf
 from matplotlib.widgets import Button
 
+def setInterval(timer, task):
+    isStop = task()
+    if not isStop:
+        Timer(timer, setInterval, [timer, task]).start()
+
+stop = False
 def plot(*args, ax=None):
     ax = ax or plt.axes()
     m, M = 10, -10
@@ -97,10 +104,17 @@ def det(a, b, c):
     (cx, cy) = c
     return ax * by + ay * cx + bx * cy - by * cx - cy * ax - ay * bx
 
+
+def det2(a, b, c):
+    (ax, ay) = a
+    (bx, by) = b
+    (cx, cy) = c
+    return (ax - cx) * (by - cy) - (ay - cy) * (bx - cx)
 class _Button_callback(object):
     def __init__(self, scenes):
         self.i = 0
         self.scenes = scenes
+        self.timer = None
 
     def set_axis(self, ax):
         self.ax = ax
@@ -112,6 +126,21 @@ class _Button_callback(object):
     def prev(self, event):
         self.i = (self.i - 1) % len(self.scenes)
         self.draw()
+    
+    def play(self, event):
+        global stop
+        stop = False
+        def play():
+            global stop
+            if stop:
+                return True
+            if self.i < len(self.scenes):
+                self.i += 1
+                self.draw()
+                return False
+            else:
+                return True
+        setInterval(0.1, play)
 
     def draw(self):
         self.ax.clear()
@@ -152,6 +181,8 @@ class LinesCollection:
 
 class Plot:
     def __init__(self, scenes = [], json = None):
+        global stop
+        stop = True
         if json is None:
             self.scenes = scenes
         else:
@@ -163,11 +194,14 @@ class Plot:
         plt.subplots_adjust(bottom=0.2)
         axprev = plt.axes([0.6, 0.05, 0.15, 0.075])
         axnext = plt.axes([0.76, 0.05, 0.15, 0.075])
+        axplay = plt.axes([0.6 - 0.16, 0.05, 0.15, 0.075])
         bnext = Button(axnext, 'Następny')
         bnext.on_clicked(callback.next)
         bprev = Button(axprev, 'Poprzedni')
         bprev.on_clicked(callback.prev)
-        return [bprev, bnext]
+        bpplay = Button(axplay, 'Play')
+        bpplay.on_clicked(callback.play)
+        return [bpplay, bprev, bnext]
 
     def draw(self):
         plt.close()
@@ -194,9 +228,11 @@ def dist_sq(a, b):
     return (x1 - x2) ** 2 + (y1 - y2) ** 2
 
 def genLines(points):
+    if (len(points) < 2):
+        return []
     lines = []
     size = len(points)
-    for i in range(size):
+    for i in range(size-1):
         lines.append([points[i], points[(i + 1) % size]])
     return lines
 
@@ -208,3 +244,17 @@ def min_index(xs, key):
             min_val_key = val_key
             index = i
     return index
+
+INLINE = COLL = 0
+LEFT = CCW = 1
+RIGHT = CW = -1
+
+def orientation(a, b, c, det=det, eps=10**-12):
+    d = det(a, b, c)
+    if abs(d) < eps:
+        return COLL
+    return CCW if d > 0 else CW
+
+def save(result, file):
+    with open(file, 'w') as file:
+        js.dump(result, file)
