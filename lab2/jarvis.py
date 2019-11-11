@@ -1,29 +1,25 @@
 from definitions import *
 
-def jarvis_visualization(points, eps = 10 ** -14):
-    size = len(points)
-    def swap(i, j):
-        points[i], points[j] = points[j], points[i]
+def jarvis_visualization(points, eps=10**-12, det=det2):
+    p = [min(points)]
 
-    p1, i = min_index(points, key=flip), 1
-    swap(0, p1)
-
+    allP = PointsCollection(points, 'gray')
     while True:
-        m = i
-        for j in range(i + 1, size + 1):
-            j %= size
-            p = points[j]
-            d = det(points[i - 1], points[m], p)
-            if abs(d) < eps and dist_sq(points[i - 1], p) > dist_sq(points[i - 1], points[m]) or d < 0:
-                m = j
-
-        yield Scene([
-                PointsCollection(points[i:], 'gray'),
-                PointsCollection(points[:i], 'green')
-        ], [ LinesCollection(genLines(points[:i]), 'blue') ])
-        if m == 0:
+        m = points[0]
+        for q in points:
+            yield Scene([ allP, PointsCollection(p, 'green') ], [
+                LinesCollection(genLines(p), 'blue'),
+                LinesCollection([[p[-1], m]], 'green'),
+                LinesCollection([[p[-1], q]], 'red')
+            ])
+            o = orientation(p[-1], m, q, det=det, eps=eps)
+            if m == p[-1] or o == RIGHT:
+                m = q
+            elif o == INLINE:
+                if dist_sq(p[-1], m) < dist_sq(p[-1], q):
+                    m = q
+        if m == p[0]:
             break
-        swap(i, m)
-        i += 1
-
-    return points[:i]
+        p.append(m)
+    yield Scene([ allP, PointsCollection(p, 'green')], [ LinesCollection(genLines(p) + [[p[-1], p[0]]], 'blue') ])
+    return p
