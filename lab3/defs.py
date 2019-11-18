@@ -1,4 +1,5 @@
 from math import fabs
+from queue import PriorityQueue
 
 ABOVE, BELOW, EQUAL = 1, -1, 0
 START, INTERSECT, END = 3, 4, 5
@@ -58,7 +59,7 @@ class Key:
         return orient == ABOVE or (orient == EQUAL and get_orientation(self.segment[1], other.segment) == ABOVE) 
 
     def __eq__(self, other):
-        return self.segment == other.segment
+        return get_orientation(self.op, other.segment) == EQUAL
 
     def __hash__(self):
         return hash(self.segment)
@@ -73,3 +74,15 @@ class Segment(tuple):
 
     def __hash__(self):
         return hash(self.line)
+
+def prepare_events(data_set):
+    pq = PriorityQueue()
+    for segment in data_set:
+        start, end = segment
+        pq.put((start, START, [Key(segment)]))
+        pq.put((end, END, [Key(segment)]))
+    return pq
+
+def iter_events(events):
+    while not (events.empty()):
+        yield events.get()

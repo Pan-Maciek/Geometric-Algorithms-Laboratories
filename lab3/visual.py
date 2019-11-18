@@ -4,31 +4,13 @@ from queue import PriorityQueue
 from definitions import *
 
 
-def prepare_events(data_set):
-    pq = PriorityQueue()
-    for segment in data_set:
-        start, end = segment
-        pq.put((start, START, [Key(segment)]))
-        pq.put((end, END, [Key(segment)]))
-    return pq
-
-def iter_events(events):
-    while not (events.empty()):
-        yield events.get()
-
-
 def algo_visual(data_set):
     events = prepare_events(data_set)
     state = SortedSet() # (point, event, [skey])
     intersections = []
     points = []
-    all_points = []
-    for start, end in data_set:
-        all_points.append(start)
-        all_points.append(end)
-    all_points = PointsCollection(all_points, color='gray')
     all_lines = LinesCollection(data_set, color='gray')
-    yield Scene([ all_points ],[ all_lines ])
+    yield Scene([ ],[ all_lines ])
 
     def get_neighbours(segment):
         index = state.index(segment)
@@ -69,14 +51,13 @@ def algo_visual(data_set):
             add_intersections(state, skey)
             above, below = get_neighbours(skey)
             yield Scene([ 
-                all_points,
                 PointsCollection(points[:], color='green'),
                 PointsCollection([point], color='red'),
             ],[ 
                 all_lines,
                 LinesCollection([x.segment for x in state], color='blue'),
                 *([LinesCollection([above], color='red')] if above else []),
-                *([LinesCollection([below], color='green')] if below else []),
+                *([LinesCollection([below], color='green')] if below else [])
             ])
         elif event == END:
             [skey] = segments
@@ -84,7 +65,6 @@ def algo_visual(data_set):
             state.remove(skey)
             add_intersection_if_exists(above, below, ABOVE)
             yield Scene([ 
-                all_points,
                 PointsCollection(points[:], color='green'),
                 PointsCollection([point], color='red'),
             ],[ 
@@ -100,7 +80,6 @@ def algo_visual(data_set):
             add_intersections(state, above)
             add_intersections(state, below)
             yield Scene([ 
-                all_points,
                 PointsCollection(points[:], color='green'),
                 PointsCollection([point], color='red'),
             ],[ 
@@ -109,4 +88,51 @@ def algo_visual(data_set):
                 LinesCollection([below.segment], color='red'),
                 LinesCollection([above.segment], color='green')
             ])
+    yield Scene([ 
+        PointsCollection(points[:], color='green')
+    ],[ all_lines ])
 
+def simple_visual(data_set):
+    events = prepare_events(data_set)
+    state = SortedSet() # (point, event, [skey])
+
+    all_lines = LinesCollection(data_set, color='gray')
+    yield Scene([ ],[ all_lines ])
+
+    def get_neighbours(segment):
+        index = state.index(segment)
+        return (state[index - 1].segment if index > 0 else None, #above
+            state[index + 1].segment if index < len(state) - 1 else None) #bellow
+
+
+    def check_if_intersection_exists(segment, neighbour, orientation):
+        if neighbour and segment:
+            point = get_intersection_point(segment, neighbour, orientation)
+            return point
+
+    def check_intersections(state, skey):
+        above, below = get_neighbours(skey)
+        return check_if_intersection_exists(skey.segment, above, BELOW) or \
+               check_if_intersection_exists(skey.segment, below, ABOVE)
+
+    for point, event, [skey] in iter_events(events):
+        if event == START:
+            state.add(skey)
+            ipoint = check_intersections(state, skey)
+        elif event == END:
+            above, below = get_neighbours(skey)
+            state.remove(skey)
+            ipoint = check_if_intersection_exists(above, below, ABOVE)
+        yield Scene([ 
+            PointsCollection([point], color='red'),
+        ],[ 
+            all_lines,
+            LinesCollection([x.segment for x in state], color='blue')
+        ])
+        if ipoint:
+            break
+    yield Scene([ 
+        PointsCollection([ipoint], color='green'),
+    ],[ 
+        all_lines
+    ])

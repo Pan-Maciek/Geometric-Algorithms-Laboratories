@@ -4,10 +4,10 @@ import matplotlib.collections as mcoll
 import matplotlib.colors as mcolors
 import json as js
 from threading import Timer
-from defs import Segment
+from defs import Segment, line
 
 from random import uniform, choice
-from math import sin, cos, pi, inf
+from math import sin, cos, pi, inf, floor, fabs, hypot
 from matplotlib.widgets import Button
 
 def setInterval(timer, task):
@@ -273,3 +273,43 @@ default_lines = [
     Segment((6,3), (11,6)),
     Segment((1.5,9.5), (3.5,1.5))
 ]
+
+def dist(line, point):
+    A, B, C = line
+    x, y = point
+    return fabs(A * x + B * y + C) / hypot(A, B)
+
+def generate_n_segments(n, min_point, max_point, min_dist=0.1):
+    min_x, min_y = min_point
+    max_x, max_y = max_point
+    
+    segments = []
+    def gen_point():
+        valid = False
+        while not valid:
+            x = uniform(min_x, max_x)
+            y = uniform(min_y, max_y)
+            for seg in segments:
+                d = dist(seg.line, (x, y))
+                if d < min_dist:
+                    valid = False
+                    break
+            else:
+                valid = True
+        return x, y
+    
+    for _ in range(n):
+        start, end = gen_point(), gen_point()
+        while start[0] == end[0]:
+            start, end = gen_point(), gen_point()
+        segments.append(Segment(start, end))
+    return segments
+
+def save_to(segments, file='data1.json'):
+    with open(file, 'w') as file:
+        js.dump(segments, file)
+
+def load(file='data1.json'):
+    with open(file, 'r') as file:
+        return [Segment((x1, y1), (x2, y2)) for ((x1, y1), (x2, y2)) in js.load(file)]
+        
