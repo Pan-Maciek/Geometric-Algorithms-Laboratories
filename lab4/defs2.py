@@ -93,7 +93,7 @@ def tr_to_line_col(poly, triangles, **kwargs):
         s.add((poly[b], poly[c]))
     return LinesCollection(list(s), **kwargs)
 
-def triangulate_vis(poly, plot):
+def triangulate_vis(poly, lines):
     ax = 1
     left_chain, right_chain = find_chains(poly, ax)
 
@@ -123,7 +123,7 @@ def triangulate_vis(poly, plot):
             PointsCollection([poly[stack[-1]]], color='blue'),
             PointsCollection([poly[vert]], color='red')
         ], [
-            LinesCollection(plot.get_added_figure()[0].lines, color='gray'),
+            lines,
             tr_to_line_col(poly, triangles)
         ])
         if top in left_chain and vert in left_chain:
@@ -134,6 +134,6 @@ def triangulate_vis(poly, plot):
             connect_all(vert)
     
     yield Scene([ ], [
-        LinesCollection(plot.get_added_figure()[0].lines, color='gray'),
+        lines,
         tr_to_line_col(poly, triangles)
     ])

@@ -209,3 +209,21 @@ def get_poly(plot):
     for u, v in plot.get_added_figure()[0].lines:
         points.append(u)
     return points
+
+def save_plot(plot, file):
+    save(get_poly(plot), file)
+
+def save(poly, file):
+    with open(file, 'w') as file:
+        js.dump(poly, file)
+
+def load_poly(file):
+    with open(file, 'r') as file:
+        return list(map(tuple, js.load(file)))
+
+def load_lines(file):
+    poly = load_poly(file)
+    lines = []
+    for i in range(len(poly)):
+        lines.append((poly[i - 1], poly[i]))
+    return LinesCollection(lines, color='gray')
